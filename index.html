@@ -123,9 +123,9 @@
     }
 
     .buttons {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
     }
 
     button {
@@ -136,12 +136,12 @@
       font-weight: 600;
       cursor: pointer;
       transition: background 0.2s, opacity 0.2s;
+      width: 100%;
     }
 
     .btn-primary {
       background: #1a5d36;
       color: #ffffff;
-      grid-column: span 2;
     }
 
     .btn-secondary {
@@ -218,7 +218,7 @@
     <div class="camera-container">
       <div id="liveTag" class="live-detection-tag">Camera Offline</div>
       <video id="video" autoplay muted playsinline></video>
-      <img id="photo" alt="Captured plant" hidden>
+      <img id="photo" alt="Captured plant" style="display: none;">
       
       <div class="viewfinder" id="viewfinder">
         <div class="viewfinder-box"></div>
@@ -226,5 +226,19 @@
     </div>
 
     <div class="status-banner" id="statusText">
-      Tap <strong>Start Camera</strong> to start camera &amp; live AI screening.
+      Tap <strong>Start Camera</strong> to connect camera &amp; load AI screening.
     </div>
+
+    <div class="buttons">
+      <button class="btn-primary" id="startBtn" style="display: block;">Start Camera</button>
+      <button class="btn-primary" id="captureBtn" style="display: none;">Capture &amp; Analyse</button>
+      <button class="btn-secondary" id="retakeBtn" style="display: none;">Retake Photo</button>
+    </div>
+
+    <div class="results-panel">
+      <h3>AI Analysis Output</h3>
+      <div id="resultsContent">Point camera at a plant to see live classification.</div>
+    </div>
+
+    <p class="disclaimer">
+      Indoor NFT Hydroponics Prototype. AI predictions are screening suggestions and should be cross-checked
