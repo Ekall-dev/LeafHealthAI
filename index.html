@@ -241,4 +241,210 @@
     </div>
 
     <p class="disclaimer">
-      Indoor NFT Hydroponics Prototype. AI predictions are screening suggestions and should be cross-checked
+      Indoor NFT Hydroponics Prototype. AI predictions are screening suggestions and should be cross-checked with EC, pH, and root health parameters.
+    </p>
+
+    <canvas id="canvas" style="display: none;"></canvas>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.3/dist/teachablemachine-image.min.js"></script>
+
+  <script>
+    const MODEL_URL = "https://teachablemachine.withgoogle.com/models/DAmEx8AiE/";
+
+    const video = document.getElementById("video");
+    const photo = document.getElementById("photo");
+    const canvas = document.getElementById("canvas");
+    const liveTag = document.getElementById("liveTag");
+    const viewfinder = document.getElementById("viewfinder");
+    
+    const startBtn = document.getElementById("startBtn");
+    const captureBtn = document.getElementById("captureBtn");
+    const retakeBtn = document.getElementById("retakeBtn");
+    
+    const statusText = document.getElementById("statusText");
+    const resultsContent = document.getElementById("resultsContent");
+
+    let stream = null;
+    let model = null;
+    let liveTimer = null;
+    let isPredicting = false;
+
+    async function loadModelInBackground() {
+      try {
+        liveTag.textContent = "Loading AI model...";
+        statusText.textContent = "Camera active. Loading AI model in background...";
+        model = await tmImage.load(
+          MODEL_URL + "model.json",
+          MODEL_URL + "metadata.json"
+        );
+        statusText.textContent = "AI model ready! Target plant inside viewfinder.";
+        liveTag.textContent = "Detecting...";
+        
+        if (liveTimer) clearInterval(liveTimer);
+        liveTimer = setInterval(detectFrame, 300);
+      } catch (err) {
+        console.error("Model load error:", err);
+        statusText.innerHTML = "<span style='color: red;'>AI Model Error: " + err.message + "</span>";
+        liveTag.textContent = "AI Load Failed";
+      }
+    }
+
+    async function detectFrame() {
+      if (!model || !video.videoWidth || isPredicting) return;
+      
+      isPredicting = true;
+      try {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const predictions = await model.predict(canvas);
+        predictions.sort((a, b) => b.probability - a.probability);
+        const top = predictions[0];
+
+        if (top) {
+          const confidence = (top.probability * 100).toFixed(1);
+          liveTag.textContent = `${top.className} (${confidence}%)`;
+        }
+      } catch (err) {
+        console.error("Live detection error:", err);
+      } finally {
+        isPredicting = false;
+      }
+    }
+
+    startBtn.addEventListener("click", async () => {
+      startBtn.disabled = true;
+      statusText.textContent = "Requesting camera stream...";
+
+      try {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          throw new Error("Camera API not supported or context is not HTTPS.");
+        }
+
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+        }
+
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: "environment" }
+        });
+
+        video.srcObject = stream;
+        await video.play();
+
+        video.style.display = "block";
+        photo.style.display = "none";
+        viewfinder.style.display = "flex";
+        
+        startBtn.style.display = "none";
+        captureBtn.style.display = "block";
+        captureBtn.disabled = false;
+        retakeBtn.style.display = "none";
+
+        liveTag.textContent = "Live Camera Active";
+        loadModelInBackground();
+
+      } catch (error) {
+        console.error("Camera error:", error);
+        statusText.innerHTML = "<span style='color: red;'>Camera Error: " + error.name + " - " + error.message + "</span>";
+        startBtn.disabled = false;
+        startBtn.style.display = "block";
+      }
+    });
+
+    captureBtn.addEventListener("click", async () => {
+      if (!video.videoWidth) return;
+
+      if (liveTimer) {
+        clearInterval(liveTimer);
+        liveTimer = null;
+      }
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      const context = canvas.getContext("2d");
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      photo.src = canvas.toDataURL("image/jpeg", 0.92);
+      video.style.display = "none";
+      photo.style.display = "block";
+      viewfinder.style.display = "none";
+
+      captureBtn.style.display = "none";
+      retakeBtn.style.display = "block";
+
+      statusText.textContent = "Analysing captured photo...";
+      resultsContent.textContent = "Computing breakdown...";
+
+      try {
+        if (!model) {
+          statusText.textContent = "Waiting for model to complete loading...";
+          model = await tmImage.load(MODEL_URL + "model.json", MODEL_URL + "metadata.json");
+        }
+
+        const predictions = await model.predict(canvas);
+        predictions.sort((a, b) => b.probability - a.probability);
+        
+        const top = predictions[0];
+        const topConfidence = (top.probability * 100).toFixed(1);
+
+        liveTag.textContent = `${top.className} (${topConfidence}%)`;
+
+        let htmlOutput = `
+          <div style="margin-bottom: 12px;">
+            <strong>Primary Crop Identified:</strong>
+            <span style="color: #1a5d36; font-size: 18px; font-weight: bold; display: block; margin-top: 4px;">${escapeHTML(top.className)}</span>
+            <small style="color: #526458;">Confidence Score: ${topConfidence}%</small>
+          </div>
+          <h4 style="margin: 12px 0 8px 0; color: #1a5d36;">All Class Breakdown:</h4>
+        `;
+
+        predictions.forEach(p => {
+          const scorePercent = (p.probability * 100).toFixed(1);
+          htmlOutput += `
+            <div class="score-bar-container">
+              <div class="score-label">
+                <span>${escapeHTML(p.className)}</span>
+                <span>${scorePercent}%</span>
+              </div>
+              <div class="score-bar-bg">
+                <div class="score-bar-fill" style="width: ${scorePercent}%;"></div>
+              </div>
+            </div>
+          `;
+        });
+
+        resultsContent.innerHTML = htmlOutput;
+        statusText.textContent = "Analysis complete.";
+
+      } catch (err) {
+        console.error(err);
+        statusText.textContent = "Analysis failed. Try retaking the photo.";
+      }
+    });
+
+    retakeBtn.addEventListener("click", () => {
+      photo.style.display = "none";
+      video.style.display = "block";
+      viewfinder.style.display = "flex";
+
+      captureBtn.style.display = "block";
+      captureBtn.disabled = false;
+      retakeBtn.style.display = "none";
+
+      statusText.textContent = "Camera active. Target plant inside viewfinder.";
+      resultsContent.textContent = "Live screening resumed. Tap Capture & Analyse to freeze diagnosis.";
+
+      if (model) {
+        liveTag.textContent = "Detecting...";
+        if (liveTimer) clearInterval(liveTimer);
+        liveTimer = setInterval(detectFrame, 300);
+      }
+    });
+
+    function escapeHTML(str) {
