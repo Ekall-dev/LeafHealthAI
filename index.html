@@ -448,3 +448,19 @@
     });
 
     function escapeHTML(str) {
+      return String(str).replace(/[&<>"']/g, c => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+      })[c]);
+    }
+
+    window.addEventListener("pagehide", () => {
+      if (liveTimer) clearInterval(liveTimer);
+      if (stream) stream.getTracks().forEach(track => track.stop());
+    });
+  </script>
+</body>
+</html>
