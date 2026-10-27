@@ -1,286 +1,239 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Leaf Health AI</title>
+  <meta name="theme-color" content="#1a5d36">
+  <title>Leaf Health AI | CityFarm Inspired</title>
 
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-      background: #f3f7f2;
-      color: #203526;
-      text-align: center;
+    * {
+      box-sizing: border-box;
     }
 
-    h1 { color: #24733d; }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #ffffff;
+      color: #2b302c;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
 
-    .panel {
-      background: white;
-      padding: 18px;
+    header {
+      width: 100%;
+      background: #1a5d36;
+      color: #ffffff;
+      padding: 16px 20px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    header p {
+      margin: 4px 0 0 0;
+      font-size: 13px;
+      opacity: 0.9;
+    }
+
+    main {
+      width: 100%;
+      max-width: 500px;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .camera-container {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background: #0d1a12;
       border-radius: 16px;
-      margin-top: 16px;
-      box-shadow: 0 2px 10px #00000012;
+      overflow: hidden;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+      display: flex;
+      justify-content: center;
+      align-items: center;
     }
 
     video, #photo {
       width: 100%;
-      max-height: 65vh;
-      object-fit: contain;
-      background: #e8eee8;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Target Viewfinder Grid Overlay */
+    .viewfinder {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .viewfinder-box {
+      width: 70%;
+      height: 70%;
+      border: 2px dashed rgba(255, 255, 255, 0.6);
       border-radius: 12px;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.25);
+    }
+
+    /* Real-Time Detection Tag (Top Center Overlay) */
+    .live-detection-tag {
+      position: absolute;
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(26, 93, 54, 0.9);
+      color: #ffffff;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      backdrop-filter: blur(4px);
+      z-index: 10;
+    }
+
+    .status-banner {
+      background: #f4f8f5;
+      border-left: 4px solid #1a5d36;
+      padding: 12px 14px;
+      border-radius: 6px;
+      font-size: 14px;
+      color: #2b302c;
+      text-align: left;
+    }
+
+    .buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
     }
 
     button {
-      width: 100%;
-      padding: 14px;
-      margin-top: 10px;
       border: none;
       border-radius: 10px;
-      background: #24733d;
-      color: white;
-      font-size: 16px;
-      font-weight: bold;
+      padding: 14px 10px;
+      font-size: 15px;
+      font-weight: 600;
       cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+    }
+
+    .btn-primary {
+      background: #1a5d36;
+      color: #ffffff;
+      grid-column: span 2;
+    }
+
+    .btn-secondary {
+      background: #e2ede5;
+      color: #1a5d36;
     }
 
     button:disabled {
-      opacity: 0.55;
-      cursor: wait;
+      opacity: 0.5;
+      cursor: not-allowed;
     }
 
-    #retakeBtn {
-      background: #647568;
-    }
-
-    #result {
+    .results-panel {
+      background: #ffffff;
+      border: 1px solid #e1e8e3;
+      border-radius: 12px;
+      padding: 16px;
       text-align: left;
-      overflow-wrap: anywhere;
-      line-height: 1.5;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     }
 
-    .note {
-      color: #526257;
-      font-size: 13px;
-      line-height: 1.5;
+    .results-panel h3 {
+      margin-top: 0;
+      color: #1a5d36;
+      font-size: 16px;
+      border-bottom: 1px solid #edf2ee;
+      padding-bottom: 8px;
     }
 
-    .score {
+    .score-bar-container {
       margin: 8px 0;
-      padding: 8px;
-      background: #f1f6f0;
-      border-radius: 8px;
+    }
+
+    .score-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .score-bar-bg {
+      height: 8px;
+      background: #eaf0ec;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .score-bar-fill {
+      height: 100%;
+      background: #1a5d36;
+      border-radius: 4px;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .disclaimer {
+      font-size: 12px;
+      color: #6e7871;
+      line-height: 1.4;
+      text-align: center;
+      margin-top: 8px;
     }
   </style>
 </head>
 
 <body>
-  <h1>🌱 Leaf Health AI</h1>
-  <p>Capture a plant image and let the AI classify it.</p>
 
-  <div class="panel">
-    <video id="video" autoplay muted playsinline></video>
-    <img id="photo" alt="Captured plant image" hidden>
+  <header>
+    <h1>CityFarm | Leaf Health AI</h1>
+    <p>Smart Hydroponic Crop Identification & Health Screening</p>
+  </header>
 
-    <button id="startBtn">Start Camera</button>
-    <button id="captureBtn" disabled>Capture &amp; Analyse</button>
-    <button id="retakeBtn" hidden>Retake Photo</button>
+  <main>
+    <div class="camera-container">
+      <div id="liveTag" class="live-detection-tag">Live: Waiting for Camera</div>
+      <video id="video" autoplay muted playsinline></video>
+      <img id="photo" alt="Captured plant" hidden>
+      
+      <div class="viewfinder" id="viewfinder">
+        <div class="viewfinder-box"></div>
+      </div>
+    </div>
 
-    <p id="status" role="status">Loading ready when you start the camera.</p>
-  </div>
+    <div class="status-banner" id="statusText">
+      Tap <strong>Start Camera</strong> to begin live AI screening.
+    </div>
 
-  <div class="panel">
-    <h2>AI Result</h2>
-    <div id="result">Capture a photo to begin analysis.</div>
-  </div>
+    <div class="buttons">
+      <button class="btn-primary" id="startBtn">Start Camera</button>
+      <button class="btn-secondary" id="captureBtn" disabled hidden>Capture &amp; Analyse</button>
+      <button class="btn-secondary" id="retakeBtn" hidden>Retake Photo</button>
+    </div>
 
-  <p class="note">
-    This prototype classifies images using your trained model.
-    Confidence is not the same as verified accuracy or a confirmed
-    plant disease diagnosis.
-  </p>
-
-  <canvas id="canvas" hidden></canvas>
-
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.3/dist/teachablemachine-image.min.js"></script>
-
-  <script>
-    const MODEL_URL =
-      "https://teachablemachine.withgoogle.com/models/DAmEx8AiE/";
-
-    const video = document.getElementById("video");
-    const photo = document.getElementById("photo");
-    const canvas = document.getElementById("canvas");
-    const startBtn = document.getElementById("startBtn");
-    const captureBtn = document.getElementById("captureBtn");
-    const retakeBtn = document.getElementById("retakeBtn");
-    const statusText = document.getElementById("status");
-    const result = document.getElementById("result");
-
-    let stream = null;
-    let model = null;
-    let busy = false;
-
-    async function loadModel() {
-      if (model) return model;
-
-      statusText.textContent = "Loading AI model...";
-      model = await tmImage.load(
-        MODEL_URL + "model.json",
-        MODEL_URL + "metadata.json"
-      );
-
-      return model;
-    }
-
-    startBtn.addEventListener("click", async () => {
-      startBtn.disabled = true;
-      statusText.textContent = "Starting camera...";
-
-      try {
-        if (!stream) {
-          stream = await navigator.mediaDevices.getUserMedia({
-            audio: false,
-            video: {
-              facingMode: { ideal: "environment" },
-              width: { ideal: 1280 },
-              height: { ideal: 960 }
-            }
-          });
-        }
-
-        video.srcObject = stream;
-        await video.play();
-
-        await loadModel();
-
-        video.hidden = false;
-        photo.hidden = true;
-        captureBtn.disabled = false;
-        captureBtn.hidden = false;
-        retakeBtn.hidden = true;
-
-        statusText.textContent = "Camera ready. Point it at your plant.";
-        result.textContent = "Capture a clear image to analyse it.";
-
-      } catch (error) {
-        console.error(error);
-        statusText.textContent =
-          "Could not start the camera or load the AI model. Check your internet connection and camera permission.";
-        startBtn.disabled = false;
-      }
-    });
-
-    captureBtn.addEventListener("click", async () => {
-      if (busy || !video.videoWidth) return;
-
-      busy = true;
-      captureBtn.disabled = true;
-      startBtn.disabled = true;
-      statusText.textContent = "Capturing image and analysing...";
-      result.textContent = "Please wait...";
-
-      try {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-
-        const context = canvas.getContext("2d");
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        photo.src = canvas.toDataURL("image/jpeg", 0.92);
-        video.hidden = true;
-        photo.hidden = false;
-        captureBtn.hidden = true;
-        retakeBtn.hidden = false;
-
-        await loadModel();
-
-        const predictions = await model.predict(canvas);
-        predictions.sort((a, b) => b.probability - a.probability);
-
-        const best = predictions[0];
-
-        if (!best) {
-          throw new Error("The model returned no predictions.");
-        }
-
-        const confidence = best.probability * 100;
-
-        let message = "";
-
-        if (best.probability < 0.60) {
-          message = `
-            <h3>Uncertain result</h3>
-            <p>The model's highest-scoring class is
-            <strong>${escapeHTML(best.className)}</strong>
-            (${confidence.toFixed(1)}%), but confidence is below 60%.
-            Try a clearer image with the plant centred.</p>
-          `;
-        } else {
-          message = `
-            <h3>Top prediction</h3>
-            <p><strong>${escapeHTML(best.className)}</strong></p>
-            <p>Model confidence: ${confidence.toFixed(1)}%</p>
-          `;
-        }
-
-        message += "<h3>All class scores</h3>";
-
-        for (const item of predictions) {
-          message += `
-            <div class="score">
-              ${escapeHTML(item.className)}:
-              ${(item.probability * 100).toFixed(1)}%
-            </div>
-          `;
-        }
-
-        result.innerHTML = message;
-        statusText.textContent = "Analysis complete.";
-
-      } catch (error) {
-        console.error(error);
-        statusText.textContent = "Analysis failed.";
-        result.textContent =
-          "Could not analyse this image. Check your internet connection and confirm that the model URL works.";
-      } finally {
-        busy = false;
-        captureBtn.disabled = false;
-        startBtn.disabled = false;
-      }
-    });
-
-    retakeBtn.addEventListener("click", () => {
-      photo.hidden = true;
-      video.hidden = false;
-      captureBtn.hidden = false;
-      captureBtn.disabled = false;
-      retakeBtn.hidden = true;
-
-      result.textContent = "Capture a new image to analyse it.";
-      statusText.textContent = "Camera ready. Point it at your plant.";
-    });
-
-    function escapeHTML(value) {
-      return String(value).replace(/[&<>"']/g, char => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
-      })[char]);
-    }
-
-    window.addEventListener("pagehide", () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-    });
-  </script>
-</body>
-</html>
+    <div class="results-panel">
+      <h3>AI Analysis
