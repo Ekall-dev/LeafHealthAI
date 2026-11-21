@@ -171,6 +171,26 @@
       padding-bottom: 8px;
     }
 
+    .badge-healthy {
+      display: inline-block;
+      background: #e2f3e7;
+      color: #1a5d36;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-weight: bold;
+      margin-top: 4px;
+    }
+
+    .badge-warning {
+      display: inline-block;
+      background: #fdecea;
+      color: #b71c1c;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-weight: bold;
+      margin-top: 4px;
+    }
+
     .score-bar-container {
       margin: 8px 0;
     }
@@ -251,7 +271,12 @@
   <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.3/dist/teachablemachine-image.min.js"></script>
 
   <script>
-    const MODEL_URL = "https://teachablemachine.withgoogle.com/models/DAmEx8AiE/";
+    // 1. Model A: Your Teachable Machine Plant Species Model
+    const TM_MODEL_URL = "https://teachablemachine.withgoogle.com/models/DAmEx8AiE/";
+
+    // 2. Model B: Roboflow Lettuce Disease Classification Model
+    const ROBOFLOW_MODEL_ENDPOINT = "https://classify.roboflow.com/lettuce-disease-uuxm6/3";
+    const ROBOFLOW_API_KEY = "rf_xAnOs64c0SY6dex2uM3WVddWuwW2";
 
     const video = document.getElementById("video");
     const photo = document.getElementById("photo");
@@ -267,32 +292,32 @@
     const resultsContent = document.getElementById("resultsContent");
 
     let stream = null;
-    let model = null;
+    let tmModel = null;
     let liveTimer = null;
     let isPredicting = false;
 
-    async function loadModelInBackground() {
+    async function loadSpeciesModelInBackground() {
       try {
-        liveTag.textContent = "Loading AI model...";
-        statusText.textContent = "Camera active. Loading AI model in background...";
-        model = await tmImage.load(
-          MODEL_URL + "model.json",
-          MODEL_URL + "metadata.json"
+        liveTag.textContent = "Loading Species AI...";
+        statusText.textContent = "Camera active. Loading species detector...";
+        tmModel = await tmImage.load(
+          TM_MODEL_URL + "model.json",
+          TM_MODEL_URL + "metadata.json"
         );
-        statusText.textContent = "AI model ready! Target plant inside viewfinder.";
+        statusText.textContent = "Camera & AI ready! Target plant inside viewfinder.";
         liveTag.textContent = "Detecting...";
         
         if (liveTimer) clearInterval(liveTimer);
-        liveTimer = setInterval(detectFrame, 300);
+        liveTimer = setInterval(detectSpeciesFrame, 300);
       } catch (err) {
-        console.error("Model load error:", err);
-        statusText.innerHTML = "<span style='color: red;'>AI Model Error: " + err.message + "</span>";
-        liveTag.textContent = "AI Load Failed";
+        console.error("Species model load error:", err);
+        statusText.innerHTML = "<span style='color: red;'>Species AI Error: " + err.message + "</span>";
+        liveTag.textContent = "Species AI Failed";
       }
     }
 
-    async function detectFrame() {
-      if (!model || !video.videoWidth || isPredicting) return;
+    async function detectSpeciesFrame() {
+      if (!tmModel || !video.videoWidth || isPredicting) return;
       
       isPredicting = true;
       try {
@@ -301,7 +326,7 @@
         const ctx = canvas.getContext("2d");
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        const predictions = await model.predict(canvas);
+        const predictions = await tmModel.predict(canvas);
         predictions.sort((a, b) => b.probability - a.probability);
         const top = predictions[0];
 
@@ -316,13 +341,32 @@
       }
     }
 
+    async function runRoboflowHealthAnalysis(base64Image) {
+      const base64Data = base64Image.replace(/^data:image\/(png|jpeg);base64,/, "");
+      const url = `${ROBOFLOW_MODEL_ENDPOINT}?api_key=${ROBOFLOW_API_KEY}`;
+
+      const response = await fetch(url, {
+        method: "POST",
+        body: base64Data,
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Roboflow API error: ${response.status}`);
+      }
+
+      return await response.json();
+    }
+
     startBtn.addEventListener("click", async () => {
       startBtn.disabled = true;
       statusText.textContent = "Requesting camera stream...";
 
       try {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          throw new Error("Camera API not supported or context is not HTTPS.");
+          throw new Error("Camera API not supported or page is not HTTPS.");
         }
 
         if (stream) {
@@ -347,7 +391,7 @@
         retakeBtn.style.display = "none";
 
         liveTag.textContent = "Live Camera Active";
-        loadModelInBackground();
+        loadSpeciesModelInBackground();
 
       } catch (error) {
         console.error("Camera error:", error);
@@ -370,7 +414,8 @@
       const context = canvas.getContext("2d");
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      photo.src = canvas.toDataURL("image/jpeg", 0.92);
+      const imageDataUrl = canvas.toDataURL("image/jpeg", 0.90);
+      photo.src = imageDataUrl;
       video.style.display = "none";
       photo.style.display = "block";
       viewfinder.style.display = "none";
@@ -378,33 +423,58 @@
       captureBtn.style.display = "none";
       retakeBtn.style.display = "block";
 
-      statusText.textContent = "Analysing captured photo...";
-      resultsContent.textContent = "Computing breakdown...";
+      statusText.textContent = "Analysing crop species & plant health...";
+      resultsContent.textContent = "Running Dual-AI screening (Species + Health)...";
 
       try {
-        if (!model) {
-          statusText.textContent = "Waiting for model to complete loading...";
-          model = await tmImage.load(MODEL_URL + "model.json", MODEL_URL + "metadata.json");
+        // 1. Run Species Identification (Model A)
+        if (!tmModel) {
+          tmModel = await tmImage.load(TM_MODEL_URL + "model.json", TM_MODEL_URL + "metadata.json");
+        }
+        const speciesPredictions = await tmModel.predict(canvas);
+        speciesPredictions.sort((a, b) => b.probability - a.probability);
+        const topSpecies = speciesPredictions[0];
+        const speciesConfidence = (topSpecies.probability * 100).toFixed(1);
+
+        liveTag.textContent = `${topSpecies.className} (${speciesConfidence}%)`;
+
+        // 2. Run Health Screening API (Model B - Roboflow)
+        let healthHtml = "";
+        try {
+          const healthData = await runRoboflowHealthAnalysis(imageDataUrl);
+          
+          if (healthData.predicted_classes && healthData.predicted_classes.length > 0) {
+            const topCondition = healthData.predicted_classes[0];
+            const conditionScore = (healthData.predictions[topCondition].confidence * 100).toFixed(1);
+            const isHealthy = topCondition.toLowerCase() === "healthy";
+            const badgeClass = isHealthy ? "badge-healthy" : "badge-warning";
+
+            healthHtml = `
+              <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #edf2ee;">
+                <strong>2. Plant Health Screening (Model B):</strong><br>
+                <span class="${badgeClass}">${escapeHTML(topCondition)} (${conditionScore}%)</span>
+              </div>
+            `;
+          } else {
+            healthHtml = `<p style="font-size: 13px; color: #526458;">No clear health anomalies returned by API.</p>`;
+          }
+        } catch (apiErr) {
+          healthHtml = `<p style="color: #b71c1c; font-size: 13px;">Health API Error: ${escapeHTML(apiErr.message)}</p>`;
         }
 
-        const predictions = await model.predict(canvas);
-        predictions.sort((a, b) => b.probability - a.probability);
-        
-        const top = predictions[0];
-        const topConfidence = (top.probability * 100).toFixed(1);
-
-        liveTag.textContent = `${top.className} (${topConfidence}%)`;
-
+        // 3. Render Combined Results
         let htmlOutput = `
-          <div style="margin-bottom: 12px;">
-            <strong>Primary Crop Identified:</strong>
-            <span style="color: #1a5d36; font-size: 18px; font-weight: bold; display: block; margin-top: 4px;">${escapeHTML(top.className)}</span>
-            <small style="color: #526458;">Confidence Score: ${topConfidence}%</small>
+          <div>
+            <strong>1. Crop Identification (Model A):</strong>
+            <span style="color: #1a5d36; font-size: 18px; font-weight: bold; display: block; margin-top: 4px;">
+              ${escapeHTML(topSpecies.className)} (${speciesConfidence}%)
+            </span>
           </div>
-          <h4 style="margin: 12px 0 8px 0; color: #1a5d36;">All Class Breakdown:</h4>
+          ${healthHtml}
+          <h4 style="margin: 16px 0 8px 0; color: #1a5d36; font-size: 14px;">Species Breakdown:</h4>
         `;
 
-        predictions.forEach(p => {
+        speciesPredictions.forEach(p => {
           const scorePercent = (p.probability * 100).toFixed(1);
           htmlOutput += `
             <div class="score-bar-container">
@@ -420,7 +490,7 @@
         });
 
         resultsContent.innerHTML = htmlOutput;
-        statusText.textContent = "Analysis complete.";
+        statusText.textContent = "Dual analysis complete.";
 
       } catch (err) {
         console.error(err);
@@ -438,12 +508,12 @@
       retakeBtn.style.display = "none";
 
       statusText.textContent = "Camera active. Target plant inside viewfinder.";
-      resultsContent.textContent = "Live screening resumed. Tap Capture & Analyse to freeze diagnosis.";
+      resultsContent.textContent = "Live species screening resumed. Tap Capture & Analyse to check plant health.";
 
-      if (model) {
+      if (tmModel) {
         liveTag.textContent = "Detecting...";
         if (liveTimer) clearInterval(liveTimer);
-        liveTimer = setInterval(detectFrame, 300);
+        liveTimer = setInterval(detectSpeciesFrame, 300);
       }
     });
 
