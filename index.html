@@ -1,771 +1,601 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#1a5d36">
-  <title>CityFarm | Leaf Health AI</title>
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Leaf Health AI | CityFarm</title>
+  <!-- TensorFlow.js & Teachable Machine -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
   <style>
-    * {
-      box-sizing: border-box;
+    :root {
+      --cf-green: #1b6b3a;
+      --cf-green-light: #e8f5ed;
+      --cf-green-dark: #134e2a;
+      --bg-white: #ffffff;
+      --bg-surface: #f7f9f8;
+      --text-main: #1a241e;
+      --text-muted: #5c6b62;
+      --border-color: #dce5df;
+      --warn-amber: #b45309;
+      --warn-bg: #fef3c7;
+      --danger-red: #b91c1c;
+      --danger-bg: #fee2e2;
     }
 
-    body {
+    * {
+      box-sizing: border-box;
       margin: 0;
       padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: #ffffff;
-      color: #2b302c;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
     }
 
+    body {
+      background-color: var(--bg-white);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      min-height: 100dvh;
+    }
+
+    /* CityFarm Header */
     header {
-      width: 100%;
-      background: #1a5d36;
+      background-color: var(--cf-green);
       color: #ffffff;
-      padding: 16px 20px;
-      text-align: center;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+      position: sticky;
+      top: 0;
+      z-index: 10;
     }
 
     header h1 {
-      margin: 0;
-      font-size: 22px;
+      font-size: 1.1rem;
       font-weight: 700;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.2px;
     }
 
-    header p {
-      margin: 4px 0 0 0;
-      font-size: 13px;
-      opacity: 0.9;
+    header span {
+      font-size: 0.75rem;
+      background: rgba(255, 255, 255, 0.18);
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-weight: 500;
     }
 
     main {
+      flex: 1;
+      padding: 16px;
+      max-width: 480px;
       width: 100%;
-      max-width: 500px;
-      padding: 20px 16px;
+      margin: 0 auto;
       display: flex;
       flex-direction: column;
       gap: 16px;
     }
 
-    .camera-container {
+    /* Viewfinder Container */
+    .viewfinder-wrapper {
       position: relative;
       width: 100%;
-      aspect-ratio: 4 / 3;
-      background: #0d1a12;
+      aspect-ratio: 1 / 1;
+      background: #111;
       border-radius: 16px;
       overflow: hidden;
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
-      display: flex;
-      justify-content: center;
-      align-items: center;
+      border: 2px solid var(--border-color);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
     }
 
-    video, #photo {
+    #webcam-video {
       width: 100%;
       height: 100%;
       object-fit: cover;
+      display: block;
     }
 
-    .viewfinder {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .viewfinder-box {
-      width: 70%;
-      height: 70%;
-      border: 2px dashed rgba(255, 255, 255, 0.75);
-      border-radius: 12px;
-      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.25);
-    }
-
-    .live-detection-tag {
+    /* Live Species Overlay Pill */
+    .species-pill {
       position: absolute;
       top: 12px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(26, 93, 54, 0.94);
-      color: #ffffff;
-      padding: 7px 16px;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.3px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.35);
-      z-index: 10;
-      white-space: nowrap;
-    }
-
-    .status-banner {
-      background: #f4f8f5;
-      border-left: 4px solid #1a5d36;
-      padding: 12px 14px;
-      border-radius: 6px;
-      font-size: 14px;
-      color: #2b302c;
-      text-align: left;
-    }
-
-    .buttons {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    button {
-      border: none;
+      left: 12px;
+      right: 12px;
+      background: rgba(255, 255, 255, 0.94);
+      backdrop-filter: blur(6px);
+      padding: 8px 12px;
       border-radius: 10px;
-      padding: 14px 10px;
-      font-size: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.85rem;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    }
+
+    .species-name {
+      font-weight: 700;
+      color: var(--text-main);
+      text-transform: capitalize;
+    }
+
+    .confidence-badge {
       font-weight: 600;
-      cursor: pointer;
-      transition: background 0.2s, opacity 0.2s;
+      font-size: 0.78rem;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: #e5e7eb;
+      color: #374151;
+    }
+
+    .confidence-badge.locked {
+      background: var(--cf-green-light);
+      color: var(--cf-green);
+    }
+
+    /* Reticle Guide */
+    .reticle {
+      position: absolute;
+      inset: 22%;
+      border: 2px dashed rgba(255, 255, 255, 0.65);
+      border-radius: 14px;
+      pointer-events: none;
+    }
+
+    /* Manual Scan Button */
+    .scan-btn {
       width: 100%;
-    }
-
-    .btn-primary {
-      background: #1a5d36;
+      padding: 15px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.1s, opacity 0.2s;
+      background-color: var(--cf-green);
       color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 4px 10px rgba(27, 107, 58, 0.22);
     }
 
-    .btn-secondary {
-      background: #e2ede5;
-      color: #1a5d36;
+    .scan-btn:active:not(:disabled) {
+      transform: scale(0.98);
+      background-color: var(--cf-green-dark);
     }
 
-    button:disabled {
-      opacity: 0.5;
+    .scan-btn:disabled {
+      background-color: #cbd5cf;
+      color: #64746b;
+      box-shadow: none;
       cursor: not-allowed;
     }
 
-    .results-panel {
-      background: #ffffff;
-      border: 1px solid #e1e8e3;
-      border-radius: 12px;
+    .gate-hint {
+      text-align: center;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: -8px;
+    }
+
+    /* Health Diagnosis Result Card */
+    .result-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
       padding: 16px;
-      text-align: left;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      display: none;
+      flex-direction: column;
+      gap: 12px;
     }
 
-    .results-panel h3 {
-      margin-top: 0;
-      color: #1a5d36;
-      font-size: 16px;
-      border-bottom: 1px solid #edf2ee;
-      padding-bottom: 8px;
+    .result-card.visible {
+      display: flex;
     }
 
-    .card-section {
-      margin-bottom: 14px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid #edf2ee;
-    }
-
-    .health-meter {
-      margin-top: 8px;
-      background: #eaf0ec;
-      height: 10px;
-      border-radius: 5px;
-      overflow: hidden;
-    }
-
-    .health-meter-fill {
-      height: 100%;
-      transition: width 0.4s ease;
-    }
-
-    .badge-healthy {
-      display: inline-block;
-      background: #e2f3e7;
-      color: #1a5d36;
-      padding: 6px 12px;
-      border-radius: 8px;
-      font-weight: bold;
-      margin-top: 6px;
-    }
-
-    .badge-warning {
-      display: inline-block;
-      background: #fdecea;
-      color: #b71c1c;
-      padding: 6px 12px;
-      border-radius: 8px;
-      font-weight: bold;
-      margin-top: 6px;
-    }
-
-    .solution-box {
-      background: #f8fbf9;
-      border: 1px solid #d4e6da;
-      border-radius: 8px;
-      padding: 12px;
-      margin-top: 10px;
-      font-size: 13px;
-      line-height: 1.5;
-    }
-
-    .solution-box strong {
-      color: #1a5d36;
-      display: block;
-      margin-bottom: 4px;
-    }
-
-    .solution-box ul {
-      margin: 4px 0 0 0;
-      padding-left: 18px;
-    }
-
-    .score-bar-container {
-      margin: 8px 0;
-    }
-
-    .score-label {
+    .card-header {
       display: flex;
       justify-content: space-between;
-      font-size: 13px;
+      align-items: flex-start;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 10px;
+    }
+
+    .card-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+
+    .detected-crop {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-main);
+      text-transform: capitalize;
+      margin-top: 2px;
+    }
+
+    .status-pill {
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.78rem;
+      font-weight: 700;
+    }
+
+    .status-healthy {
+      background: var(--cf-green-light);
+      color: var(--cf-green);
+    }
+
+    .status-warning {
+      background: var(--warn-bg);
+      color: var(--warn-amber);
+    }
+
+    .status-critical {
+      background: var(--danger-bg);
+      color: var(--danger-red);
+    }
+
+    .diagnosis-block h3 {
+      font-size: 0.88rem;
+      font-weight: 700;
       margin-bottom: 4px;
     }
 
-    .score-bar-bg {
-      height: 8px;
-      background: #eaf0ec;
-      border-radius: 4px;
-      overflow: hidden;
+    .diagnosis-block p {
+      font-size: 0.86rem;
+      line-height: 1.45;
+      color: var(--text-muted);
     }
 
-    .score-bar-fill {
-      height: 100%;
-      background: #1a5d36;
-      border-radius: 4px;
-      width: 0%;
-      transition: width 0.3s ease;
+    .action-box {
+      background: var(--bg-white);
+      border-left: 3px solid var(--cf-green);
+      padding: 10px 12px;
+      border-radius: 6px;
+      font-size: 0.84rem;
+      line-height: 1.45;
     }
 
-    .disclaimer {
-      font-size: 12px;
-      color: #6e7871;
-      line-height: 1.4;
-      text-align: center;
-      margin-top: 8px;
+    .action-box strong {
+      color: var(--cf-green);
+      display: block;
+      margin-bottom: 2px;
     }
   </style>
 </head>
-
 <body>
 
   <header>
-    <h1>CityFarm | Leaf Health AI</h1>
-    <p>Smart Hydroponic Crop Identification &amp; Health Screening</p>
+    <h1>Leaf Health AI</h1>
+    <span>CityFarm Diagnostic</span>
   </header>
 
   <main>
-    <div class="camera-container">
-      <div id="liveTag" class="live-detection-tag">Camera Offline</div>
-      <video id="video" autoplay muted playsinline></video>
-      <img id="photo" alt="Captured plant" style="display: none;">
-      
-      <div class="viewfinder" id="viewfinder">
-        <div class="viewfinder-box"></div>
+    <!-- Live Camera Viewfinder -->
+    <div class="viewfinder-wrapper">
+      <video id="webcam-video" autoplay playsinline muted></video>
+      <div class="reticle"></div>
+      <div class="species-pill">
+        <span id="live-species" class="species-name">Initializing camera...</span>
+        <span id="live-confidence" class="confidence-badge">--%</span>
       </div>
     </div>
 
-    <div class="status-banner" id="statusText">
-      Tap <strong>Start Camera</strong> to connect camera &amp; start live plant detection.
-    </div>
-
-    <div class="buttons">
-      <button class="btn-primary" id="startBtn" style="display: block;">Start Camera</button>
-      <button class="btn-primary" id="captureBtn" style="display: none;">Capture &amp; Analyse Health</button>
-      <button class="btn-secondary" id="retakeBtn" style="display: none;">Retake Photo</button>
-    </div>
-
-    <div class="results-panel">
-      <h3>AI Analysis Output</h3>
-      <div id="resultsContent">Point camera at a plant to see live species detection, then capture for full health &amp; disease screening.</div>
-    </div>
-
-    <p class="disclaimer">
-      Indoor NFT Hydroponics Prototype. AI predictions are screening suggestions—always check solution EC, pH, and root-zone temperature before applying treatments.
+    <!-- Manual Shutter Button -->
+    <button id="scan-btn" class="scan-btn" disabled>
+      Scan Leaf for Health Check
+    </button>
+    <p id="gate-hint" class="gate-hint">
+      Point at a crop leaf until confidence locks at 80%+
     </p>
 
-    <canvas id="canvas" style="display: none;"></canvas>
+    <!-- Clean Health Diagnosis Result Card -->
+    <section id="result-card" class="result-card" aria-live="polite">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Diagnosis Report</div>
+          <div id="card-crop" class="detected-crop">Sweet Basil</div>
+        </div>
+        <span id="card-status" class="status-pill status-healthy">Healthy</span>
+      </div>
+
+      <div class="diagnosis-block">
+        <h3 id="card-condition">Optimal Foliar Condition</h3>
+        <p id="card-details">No chlorosis, necrosis, or pest lesions detected on leaf surface.</p>
+      </div>
+
+      <div class="action-box">
+        <strong>Hydroponic Action</strong>
+        <span id="card-action">Maintain current EC and pH range. Continue routine monitoring.</span>
+      </div>
+    </section>
   </main>
 
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8.3/dist/teachablemachine-image.min.js"></script>
-
   <script>
-    // =========================================================================
-    // CONFIGURATION: PASTE YOUR PLANT.ID KEY FROM KINDWISE DASHBOARD BELOW
-    // =========================================================================
-    const PLANT_ID_API_KEY = "PASTE_YOUR_PLANT_ID_KEY_HERE";
+    // =========================================================
+    // 1. CONFIGURATION (Fill in your Roboflow & TM details)
+    // =========================================================
+    const TM_MODEL_URL = "./my_model/";
+    const CONFIDENCE_THRESHOLD = 0.80;
+    const IGNORED_CLASSES = ["unknown", "other plant"];
 
-    // Your Teachable Machine Plant Species Model (Live Detection)
-    const TM_MODEL_URL = "https://teachablemachine.withgoogle.com/models/DAmEx8AiE/";
+    const ROBOFLOW_WORKSPACE = "haikal-lamo";
+    const ROBOFLOW_WORKFLOW_ID = "YOUR_WORKFLOW_ID";
+    const ROBOFLOW_API_KEY = "YOUR_API_KEY";
+    const WORKFLOW_URL = `https://serverless.roboflow.com/infer/workflows/${ROBOFLOW_WORKSPACE}/${ROBOFLOW_WORKFLOW_ID}`;
 
-    // Backup Roboflow Health Endpoint (used automatically if Plant.id key isn't set)
-    const ROBOFLOW_MODEL_ENDPOINT = "https://classify.roboflow.com/lettuce-disease-uuxm6/3";
-    const ROBOFLOW_API_KEY = "rf_xAnOs64c0SY6dex2uM3WVddWuwW2";
-
-    const video = document.getElementById("video");
-    const photo = document.getElementById("photo");
-    const canvas = document.getElementById("canvas");
-    const liveTag = document.getElementById("liveTag");
-    const viewfinder = document.getElementById("viewfinder");
-    
-    const startBtn = document.getElementById("startBtn");
-    const captureBtn = document.getElementById("captureBtn");
-    const retakeBtn = document.getElementById("retakeBtn");
-    
-    const statusText = document.getElementById("statusText");
-    const resultsContent = document.getElementById("resultsContent");
-
-    let stream = null;
-    let tmModel = null;
-    let liveTimer = null;
-    let isPredicting = false;
-
-    // Hydroponic NFT Treatment Recommendations mapped to detected conditions
-    function getHydroponicRecommendations(conditionName) {
-      const label = conditionName.toLowerCase();
-
-      if (label.includes("healthy") || label.includes("no disease")) {
-        return {
-          title: "Optimal Hydroponic Maintenance",
-          steps: [
-            "Maintain NFT nutrient solution EC between 1.2 – 1.8 mS/cm and pH between 5.5 – 6.2.",
-            "Keep reservoir water temperature below 24°C to maintain dissolved oxygen.",
-            "Continue routine visual checks of lower leaves and white/cream root health."
-          ]
-        };
+    // =========================================================
+    // 2. HYDROCARES DATASET DIAGNOSIS MAPPING
+    // =========================================================
+    const DIAGNOSIS_MAP = {
+      "Selada-Diseased": {
+        status: "critical",
+        badgeText: "Disease Detected",
+        condition: "Lettuce Foliar Disease / Tipburn Stress",
+        details: "Lesions, marginal necrosis, or pathogen spotting detected on lettuce foliage.",
+        action: "Isolate affected NFT channel, check root zone DO (>6 mg/L), verify EC (1.2–1.6 mS/cm) and pH (5.8–6.2), and improve airflow."
+      },
+      "Selada-Healthy": {
+        status: "healthy",
+        badgeText: "Healthy",
+        condition: "Healthy Lettuce Foliage",
+        details: "Turgid leaf tissue with uniform chlorophyll and no visible disease lesions.",
+        action: "Maintain current Fertilizer A/B dosing schedule and reservoir pH (5.8–6.2)."
+      },
+      "Pakcoy-Diseased": {
+        status: "critical",
+        badgeText: "Disease Detected",
+        condition: "Pak Choi Foliar Infection / Nutrient Stress",
+        details: "Spotting, yellowing, or tissue breakdown detected on Brassica foliage.",
+        action: "Prune symptomatic outer leaves, inspect undersides for pests, and check Calcium/Magnesium balance and EC (1.5–2.0 mS/cm)."
+      },
+      "Pakcoy-Healthy": {
+        status: "healthy",
+        badgeText: "Healthy",
+        condition: "Healthy Pak Choi Foliage",
+        details: "Vigorous green leaf blade and clean petiole with no signs of stress.",
+        action: "Continue routine EC and water temperature monitoring (<28°C)."
+      },
+      "Bayam-Diseased": {
+        status: "critical",
+        badgeText: "Disease Detected",
+        condition: "Spinach / Amaranth Foliar Disease",
+        details: "Chlorotic spots or fungal/bacterial blight indicators detected.",
+        action: "Reduce leaf wetness, sanitize tools, and verify reservoir pH (6.0–6.5) and EC (1.4–1.8 mS/cm)."
+      },
+      "Bayam-Healthy": {
+        status: "healthy",
+        badgeText: "Healthy",
+        condition: "Healthy Spinach Foliage",
+        details: "Clean leaf surface with healthy coloration and no lesion markers.",
+        action: "Maintain current nutrient tank concentration and light cycle."
       }
-      if (label.includes("bacterial") || label.includes("soft rot")) {
-        return {
-          title: "Bacterial Infection Protocol",
-          steps: [
-            "Remove infected plants immediately so bacteria do not spread through the recirculating NFT channel.",
-            "Sanitize gullies and tools; avoid splashing water onto leaves.",
-            "Increase indoor air circulation and keep relative humidity below 70%.",
-            "Inoculate reservoir with beneficial microbes (e.g., Bacillus amyloliquefaciens)."
-          ]
-        };
-      }
-      if (label.includes("fung") || label.includes("mildew") || label.includes("mold") || label.includes("rust") || label.includes("spot")) {
-        return {
-          title: "Fungal / Leaf Spot Management",
-          steps: [
-            "Prune heavily affected outer leaves and dispose of them outside the grow area.",
-            "Increase canopy airflow with oscillating fans and reduce humidity to 55% – 65%.",
-            "Apply a hydroponic-safe bio-fungicide (potassium bicarbonate or Trichoderma treatment).",
-            "Ensure adequate plant spacing so moisture does not sit on leaf surfaces."
-          ]
-        };
-      }
-      if (label.includes("deficien") || label.includes("chlorosis") || label.includes("yellow") || label.includes("nutrient")) {
-        return {
-          title: "Nutrient & pH Imbalance Correction",
-          steps: [
-            "Measure reservoir pH immediately—values above 6.5 lock out iron, calcium, and micronutrients.",
-            "Check EC levels and top up with balanced A+B hydroponic nutrient solution.",
-            "Verify solution temperature is not exceeding 26°C, which impairs root nutrient uptake."
-          ]
-        };
-      }
-      if (label.includes("wilt") || label.includes("blight") || label.includes("tipburn") || label.includes("water") || label.includes("abiotic")) {
-        return {
-          title: "Root-Zone & Transpiration Stress Protocol",
-          steps: [
-            "Check water temperature (27–30°C reduces dissolved oxygen and triggers wilting/tip burn).",
-            "Inspect roots for slimy brown rot (Pythium); flush and treat with food-grade H2O2 or beneficial microbes if needed.",
-            "Maintain steady gentle airflow across leaf tips to support calcium transport."
-          ]
-        };
-      }
-      return {
-        title: "General Indoor Hydroponic Action Plan",
-        steps: [
-          "Inspect leaf undersides for pests (aphids, thrips, spider mites) and check root color in the NFT channel.",
-          "Verify reservoir pH (5.5–6.2), EC (1.2–1.8 mS/cm), and solution temperature (< 24°C).",
-          "Isolate severely affected plants until symptoms stabilize."
-        ]
-      };
-    }
+    };
 
-    async function loadSpeciesModelInBackground() {
+    // =========================================================
+    // 3. APP STATE & DOM REFERENCES
+    // =========================================================
+    let model;
+    let currentTopClass = "unknown";
+    let currentTopProb = 0;
+    let isScanning = false;
+
+    const videoEl = document.getElementById("webcam-video");
+    const speciesEl = document.getElementById("live-species");
+    const confEl = document.getElementById("live-confidence");
+    const scanBtn = document.getElementById("scan-btn");
+    const gateHint = document.getElementById("gate-hint");
+    const resultCard = document.getElementById("result-card");
+
+    // =========================================================
+    // 4. INITIALIZE REAR CAMERA & TEACHABLE MACHINE
+    // =========================================================
+    async function initApp() {
       try {
-        liveTag.textContent = "Loading Species AI...";
-        statusText.textContent = "Camera active. Loading live plant identifier...";
-        tmModel = await tmImage.load(
-          TM_MODEL_URL + "model.json",
-          TM_MODEL_URL + "metadata.json"
-        );
-        statusText.textContent = "Camera & AI ready! Center plant in viewfinder, then tap Capture.";
-        liveTag.textContent = "Scanning...";
-        
-        if (liveTimer) clearInterval(liveTimer);
-        liveTimer = setInterval(detectSpeciesFrame, 300);
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 1080 }, height: { ideal: 1080 } },
+          audio: false
+        });
+        videoEl.srcObject = stream;
+        await videoEl.play();
+
+        speciesEl.textContent = "Loading leaf model...";
+        model = await tmImage.load(TM_MODEL_URL + "model.json", TM_MODEL_URL + "metadata.json");
+        speciesEl.textContent = "Ready";
+
+        setInterval(classifyLiveFrame, 350);
       } catch (err) {
-        console.error("Species model load error:", err);
-        statusText.innerHTML = "<span style='color: red;'>Species AI Error: " + err.message + "</span>";
-        liveTag.textContent = "AI Load Failed";
+        speciesEl.textContent = "Camera/Model Error";
+        gateHint.textContent = err.message;
       }
     }
 
-    async function detectSpeciesFrame() {
-      if (!tmModel || !video.videoWidth || isPredicting) return;
-      
-      isPredicting = true;
+    // =========================================================
+    // 5. CONFIDENCE GATING LOOP
+    // =========================================================
+    async function classifyLiveFrame() {
+      if (!model || isScanning || videoEl.readyState < 2) return;
+
+      const predictions = await model.predict(videoEl);
+      predictions.sort((a, b) => b.probability - a.probability);
+
+      const top = predictions[0];
+      currentTopClass = top.className.toLowerCase().trim();
+      currentTopProb = top.probability;
+
+      const pct = Math.round(currentTopProb * 100);
+      speciesEl.textContent = top.className;
+      confEl.textContent = `${pct}%`;
+
+      const isValidCrop = !IGNORED_CLASSES.includes(currentTopClass);
+      const passesGate = isValidCrop && currentTopProb >= CONFIDENCE_THRESHOLD;
+
+      if (passesGate) {
+        confEl.classList.add("locked");
+        scanBtn.disabled = false;
+        gateHint.textContent = `Locked on ${top.className} — tap Scan Leaf to diagnose`;
+      } else {
+        confEl.classList.remove("locked");
+        scanBtn.disabled = true;
+        gateHint.textContent = isValidCrop
+          ? `Hold steady (${pct}% / 80% needed to unlock scan)`
+          : "Frame a valid hydroponic crop leaf inside the guide";
+      }
+    }
+
+    // =========================================================
+    // 6. DOWNSCALE FRAME TO 640x640 BASE64 JPEG
+    // =========================================================
+    function captureCleanBase64() {
+      const canvas = document.createElement("canvas");
+      canvas.width = 640;
+      canvas.height = 640;
+      const ctx = canvas.getContext("2d");
+
+      const size = Math.min(videoEl.videoWidth, videoEl.videoHeight);
+      const sx = (videoEl.videoWidth - size) / 2;
+      const sy = (videoEl.videoHeight - size) / 2;
+
+      ctx.drawImage(videoEl, sx, sy, size, size, 0, 0, 640, 640);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+      return dataUrl.replace(/^data:image\/jpeg;base64,/, "");
+    }
+
+    // =========================================================
+    // 7. ROBOFLOW SERVERLESS WORKFLOW REQUEST
+    // =========================================================
+    scanBtn.addEventListener("click", async () => {
+      if (isScanning) return;
+      isScanning = true;
+      scanBtn.disabled = true;
+      scanBtn.textContent = "Analyzing Leaf Health...";
+
+      const lockedSpecies = speciesEl.textContent;
+      const base64Image = captureCleanBase64();
+
       try {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        const predictions = await tmModel.predict(canvas);
-        predictions.sort((a, b) => b.probability - a.probability);
-        const top = predictions[0];
-
-        if (top) {
-          const confidence = (top.probability * 100).toFixed(1);
-          liveTag.textContent = `${top.className} (${confidence}%)`;
-        }
-      } catch (err) {
-        console.error("Live detection error:", err);
-      } finally {
-        isPredicting = false;
-      }
-    }
-
-    async function analyzePlantHealth(base64Image) {
-      const base64Data = base64Image.replace(/^data:image\/(png|jpeg);base64,/, "");
-
-      // PRIMARY: Plant.id v3 Health Assessment API
-      if (PLANT_ID_API_KEY && PLANT_ID_API_KEY !== "PASTE_YOUR_PLANT_ID_KEY_HERE" && PLANT_ID_API_KEY.trim() !== "") {
-        const response = await fetch("https://plant.id/api/v3/health_assessment?details=description,treatment", {
+        const response = await fetch(WORKFLOW_URL, {
           method: "POST",
           headers: {
-            "Api-Key": PLANT_ID_API_KEY.trim(),
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            images: [base64Data],
-            similar_images: false
+            api_key: ROBOFLOW_API_KEY,
+            inputs: {
+              image: {
+                type: "base64",
+                value: base64Image
+              },
+              classes: "Bayam-Diseased, Bayam-Healthy, Pakcoy-Diseased, Pakcoy-Healthy, Selada-Diseased, Selada-Healthy"
+            }
           })
         });
 
         if (!response.ok) {
-          const errMsg = await response.text();
-          throw new Error(`Plant.id API (${response.status}): ${errMsg}`);
+          const errText = await response.text();
+          throw new Error(`HTTP ${response.status}: ${errText.slice(0, 120)}`);
         }
 
         const data = await response.json();
-        const isHealthyProb = data.result?.is_healthy?.probability ?? 0;
-        const isHealthyBool = data.result?.is_healthy?.binary ?? (isHealthyProb >= 0.5);
-        const diseases = data.result?.disease?.suggestions ?? [];
+        const report = parseRoboflowWorkflow(data);
+        renderDiagnosisCard(lockedSpecies, report);
+      } catch (err) {
+        renderDiagnosisCard(lockedSpecies, {
+          status: "critical",
+          badgeText: "API Error",
+          condition: "Roboflow Workflow Failed",
+          details: err.message,
+          action: "Verify your Workflow ID, API key, and internet connection, then retry."
+        });
+      } finally {
+        isScanning = false;
+        scanBtn.textContent = "Scan Leaf for Health Check";
+      }
+    });
 
-        let detectedCondition = "Healthy Plant";
-        let conditionProb = isHealthyProb * 100;
-        let description = "";
-        let apiTreatmentSteps = [];
+    // =========================================================
+    // 8. RESILIENT WORKFLOW JSON PARSER
+    // =========================================================
+    function parseRoboflowWorkflow(data) {
+      const firstOutput = data?.outputs?.[0] || data;
 
-        if (!isHealthyBool && diseases.length > 0) {
-          const topDisease = diseases[0];
-          detectedCondition = topDisease.name;
-          conditionProb = topDisease.probability * 100;
-          description = topDisease.details?.description || "";
-
-          if (topDisease.details?.treatment) {
-            const t = topDisease.details.treatment;
-            if (Array.isArray(t.biological)) apiTreatmentSteps.push(...t.biological);
-            if (Array.isArray(t.prevention)) apiTreatmentSteps.push(...t.prevention);
-            if (Array.isArray(t.chemical)) apiTreatmentSteps.push(...t.chemical);
-          }
-        } else if (diseases.length > 0 && diseases[0].probability > 0.35) {
-          // Flag early warning if a specific disease exceeds 35% even if overall binary is borderline
-          const topDisease = diseases[0];
-          detectedCondition = `Early Risk: ${topDisease.name}`;
-          conditionProb = topDisease.probability * 100;
-          description = topDisease.details?.description || "";
-          if (topDisease.details?.treatment) {
-            const t = topDisease.details.treatment;
-            if (Array.isArray(t.biological)) apiTreatmentSteps.push(...t.biological);
-            if (Array.isArray(t.prevention)) apiTreatmentSteps.push(...t.prevention);
+      let predictions = [];
+      if (Array.isArray(firstOutput?.predictions?.predictions)) {
+        predictions = firstOutput.predictions.predictions;
+      } else if (Array.isArray(firstOutput?.predictions)) {
+        predictions = firstOutput.predictions;
+      } else {
+        for (const val of Object.values(firstOutput || {})) {
+          if (Array.isArray(val?.predictions)) {
+            predictions = val.predictions;
+            break;
           }
         }
+      }
 
+      if (!predictions.length) {
         return {
-          engine: "Plant.id v3",
-          isHealthy: isHealthyBool && !detectedCondition.startsWith("Early Risk"),
-          healthyPercent: (isHealthyProb * 100).toFixed(1),
-          conditionName: detectedCondition,
-          conditionConfidence: conditionProb.toFixed(1),
-          description: description,
-          apiTreatmentSteps: apiTreatmentSteps
+          status: "healthy",
+          badgeText: "No Lesions Flagged",
+          condition: "No Disease Markers Detected",
+          details: "The Roboflow hydroponic model did not detect any disease spots or stress signatures on this leaf.",
+          action: "Continue routine EC/pH monitoring in your CityFarm reservoir."
         };
       }
 
-      // FALLBACK: Roboflow Classification Endpoint
-      const url = `${ROBOFLOW_MODEL_ENDPOINT}?api_key=${ROBOFLOW_API_KEY}`;
-      const response = await fetch(url, {
-        method: "POST",
-        body: base64Data,
-        headers: { "Content-Type": "application/x-www-form-urlencoded" }
-      });
+      predictions.sort((a, b) => (b.confidence || 0) - (a.confidence || 0));
+      const topHit = predictions[0];
+      const label = topHit.class || "Unknown";
+      const confPct = Math.round((topHit.confidence || 0) * 100);
 
-      if (!response.ok) {
-        throw new Error(`Roboflow API HTTP ${response.status}`);
+      if (DIAGNOSIS_MAP[label]) {
+        const mapped = DIAGNOSIS_MAP[label];
+        return {
+          ...mapped,
+          badgeText: `${mapped.badgeText} (${confPct}%)`
+        };
       }
 
-      const data = await response.json();
-      let topCondition = "Unknown";
-      let topConfidence = 0;
-      let healthyScore = 0;
-
-      if (data.predictions && !Array.isArray(data.predictions)) {
-        const entries = Object.entries(data.predictions);
-        entries.sort((a, b) => b[1].confidence - a[1].confidence);
-        if (entries.length > 0) {
-          topCondition = entries[0][0];
-          topConfidence = entries[0][1].confidence * 100;
-        }
-        const hKey = Object.keys(data.predictions).find(k => k.toLowerCase() === "healthy");
-        if (hKey) healthyScore = data.predictions[hKey].confidence * 100;
-      } else if (Array.isArray(data.predictions) && data.predictions.length > 0) {
-        data.predictions.sort((a, b) => b.confidence - a.confidence);
-        topCondition = data.predictions[0].class;
-        topConfidence = data.predictions[0].confidence * 100;
-        const hItem = data.predictions.find(p => p.class.toLowerCase() === "healthy");
-        if (hItem) healthyScore = hItem.confidence * 100;
-      }
-
-      const cleanName = topCondition.replace(/_/g, " ");
+      const isDiseased = label.toLowerCase().includes("diseased");
       return {
-        engine: "Roboflow Fallback",
-        isHealthy: cleanName.toLowerCase() === "healthy",
-        healthyPercent: healthyScore.toFixed(1),
-        conditionName: cleanName,
-        conditionConfidence: topConfidence.toFixed(1),
-        description: "",
-        apiTreatmentSteps: []
+        status: isDiseased ? "critical" : "healthy",
+        badgeText: `${label} (${confPct}%)`,
+        condition: isDiseased ? `Detected: ${label}` : `Healthy Specimen (${label})`,
+        details: `Roboflow workflow classified the leaf as ${label} with ${confPct}% confidence.`,
+        action: isDiseased
+          ? "Inspect reservoir EC, pH, and root oxygenation; isolate affected plant if lesions spread."
+          : "Maintain current hydroponic nutrient parameters."
       };
     }
 
-    startBtn.addEventListener("click", async () => {
-      startBtn.disabled = true;
-      statusText.textContent = "Opening camera...";
+    // =========================================================
+    // 9. RENDER DIAGNOSIS RESULT CARD
+    // =========================================================
+    function renderDiagnosisCard(species, report) {
+      document.getElementById("card-crop").textContent = species;
 
-      try {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          throw new Error("Camera API requires HTTPS and a supported mobile browser.");
-        }
+      const statusEl = document.getElementById("card-status");
+      statusEl.textContent = report.badgeText;
+      statusEl.className = "status-pill";
+      if (report.status === "healthy") statusEl.classList.add("status-healthy");
+      else if (report.status === "warning") statusEl.classList.add("status-warning");
+      else statusEl.classList.add("status-critical");
 
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop());
-        }
+      document.getElementById("card-condition").textContent = report.condition;
+      document.getElementById("card-details").textContent = report.details;
+      document.getElementById("card-action").textContent = report.action;
 
-        stream = await navigator.mediaDevices.getUserMedia({
-          audio: false,
-          video: { facingMode: "environment" }
-        });
-
-        video.srcObject = stream;
-        await video.play();
-
-        video.style.display = "block";
-        photo.style.display = "none";
-        viewfinder.style.display = "flex";
-        
-        startBtn.style.display = "none";
-        captureBtn.style.display = "block";
-        captureBtn.disabled = false;
-        retakeBtn.style.display = "none";
-
-        liveTag.textContent = "Live Camera Active";
-        loadSpeciesModelInBackground();
-
-      } catch (error) {
-        console.error("Camera error:", error);
-        statusText.innerHTML = "<span style='color: red;'>Camera Error: " + error.name + " - " + error.message + "</span>";
-        startBtn.disabled = false;
-        startBtn.style.display = "block";
-      }
-    });
-
-    captureBtn.addEventListener("click", async () => {
-      if (!video.videoWidth) return;
-
-      if (liveTimer) {
-        clearInterval(liveTimer);
-        liveTimer = null;
-      }
-
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const context = canvas.getContext("2d");
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      const imageDataUrl = canvas.toDataURL("image/jpeg", 0.90);
-      photo.src = imageDataUrl;
-      video.style.display = "none";
-      photo.style.display = "block";
-      viewfinder.style.display = "none";
-
-      captureBtn.style.display = "none";
-      retakeBtn.style.display = "block";
-
-      statusText.textContent = "Analysing crop species, health % & treatment solutions...";
-      resultsContent.textContent = "Running Dual-AI screening (Species + Health Assessment)...";
-
-      try {
-        // 1. Identify Plant Species (Teachable Machine)
-        if (!tmModel) {
-          tmModel = await tmImage.load(TM_MODEL_URL + "model.json", TM_MODEL_URL + "metadata.json");
-        }
-        const speciesPredictions = await tmModel.predict(canvas);
-        speciesPredictions.sort((a, b) => b.probability - a.probability);
-        const topSpecies = speciesPredictions[0];
-        const speciesConfidence = (topSpecies.probability * 100).toFixed(1);
-
-        liveTag.textContent = `${topSpecies.className} (${speciesConfidence}%)`;
-
-        // 2. Run Health & Disease Analysis + Solutions
-        let healthSectionHtml = "";
-        try {
-          const health = await analyzePlantHealth(imageDataUrl);
-          const badgeClass = health.isHealthy ? "badge-healthy" : "badge-warning";
-          const meterColor = parseFloat(health.healthyPercent) >= 60 ? "#1a5d36" : "#c62828";
-          const hydroSolution = getHydroponicRecommendations(health.conditionName);
-
-          // Combine API treatments (if available) with Hydroponic NFT recommendations
-          let allSteps = [...hydroSolution.steps];
-          if (health.apiTreatmentSteps && health.apiTreatmentSteps.length > 0) {
-            allSteps = [...health.apiTreatmentSteps.slice(0, 3), ...hydroSolution.steps];
-          }
-          const stepsHtml = allSteps.map(s => `<li>${escapeHTML(s)}</li>`).join("");
-
-          const descHtml = health.description
-            ? `<p style="font-size: 12.5px; color: #4a554e; margin: 8px 0;">${escapeHTML(health.description)}</p>`
-            : "";
-
-          healthSectionHtml = `
-            <div class="card-section">
-              <strong>2. Plant Health &amp; Disease Screening (${escapeHTML(health.engine)}):</strong><br>
-              <span class="${badgeClass}">
-                ${health.isHealthy ? "✅ Healthy" : "⚠️ " + escapeHTML(health.conditionName)} (${health.conditionConfidence}%)
-              </span>
-
-              <div style="margin-top: 10px; font-size: 13px;">
-                <div style="display: flex; justify-content: space-between;">
-                  <span>Plant Health Score:</span>
-                  <strong>${health.healthyPercent}%</strong>
-                </div>
-                <div class="health-meter">
-                  <div class="health-meter-fill" style="width: ${health.healthyPercent}%; background: ${meterColor};"></div>
-                </div>
-              </div>
-
-              ${descHtml}
-
-              <div class="solution-box">
-                <strong>Recommended Solution (${escapeHTML(hydroSolution.title)}):</strong>
-                <ul>${stepsHtml}</ul>
-              </div>
-            </div>
-          `;
-        } catch (apiErr) {
-          healthSectionHtml = `
-            <div class="card-section">
-              <strong>2. Plant Health Screening:</strong>
-              <p style="color: #b71c1c; font-size: 13px; margin: 6px 0 0 0;">
-                Health API Error: ${escapeHTML(apiErr.message)}
-              </p>
-            </div>
-          `;
-        }
-
-        // 3. Render Complete Output
-        let htmlOutput = `
-          <div class="card-section">
-            <strong>1. Detected Plant Type:</strong>
-            <span style="color: #1a5d36; font-size: 18px; font-weight: bold; display: block; margin-top: 4px;">
-              ${escapeHTML(topSpecies.className)} (${speciesConfidence}%)
-            </span>
-          </div>
-          ${healthSectionHtml}
-          <h4 style="margin: 12px 0 8px 0; color: #1a5d36; font-size: 14px;">All Plant Species Scores:</h4>
-        `;
-
-        speciesPredictions.forEach(p => {
-          const scorePercent = (p.probability * 100).toFixed(1);
-          htmlOutput += `
-            <div class="score-bar-container">
-              <div class="score-label">
-                <span>${escapeHTML(p.className)}</span>
-                <span>${scorePercent}%</span>
-              </div>
-              <div class="score-bar-bg">
-                <div class="score-bar-fill" style="width: ${scorePercent}%;"></div>
-              </div>
-            </div>
-          `;
-        });
-
-        resultsContent.innerHTML = htmlOutput;
-        statusText.textContent = "Plant & health analysis complete.";
-
-      } catch (err) {
-        console.error(err);
-        statusText.textContent = "Analysis failed. Please tap Retake Photo and try again.";
-      }
-    });
-
-    retakeBtn.addEventListener("click", () => {
-      photo.style.display = "none";
-      video.style.display = "block";
-      viewfinder.style.display = "flex";
-
-      captureBtn.style.display = "block";
-      captureBtn.disabled = false;
-      retakeBtn.style.display = "none";
-
-      statusText.textContent = "Camera active. Center plant inside viewfinder.";
-      resultsContent.textContent = "Live species screening resumed. Tap Capture & Analyse Health to inspect.";
-
-      if (tmModel) {
-        liveTag.textContent = "Scanning...";
-        if (liveTimer) clearInterval(liveTimer);
-        liveTimer = setInterval(detectSpeciesFrame, 300);
-      }
-    });
-
-    function escapeHTML(str) {
-      return String(str).replace(/[&<>"']/g, c => ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        '"': "&quot;",
-        "'": "&#39;"
-      })[c]);
+      resultCard.classList.add("visible");
+      resultCard.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
 
-    window.addEventListener("pagehide", () => {
-      if (liveTimer) clearInterval(liveTimer);
-      if (stream) stream.getTracks().forEach(track => track.stop());
-    });
+    initApp();
   </script>
 </body>
 </html>
