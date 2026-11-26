@@ -319,15 +319,15 @@
 
   <script>
     // =========================================================
-    // 1. CONFIGURATION (Fill in your Roboflow & TM details)
+    // 1. TEACHABLE MACHINE & ROBOFLOW CONFIGURATION
     // =========================================================
-    const TM_MODEL_URL = "./my_model/";
+    const TM_MODEL_URL = "https://teachablemachine.withgoogle.com/models/DAmEx8AiE/";
     const CONFIDENCE_THRESHOLD = 0.80;
     const IGNORED_CLASSES = ["unknown", "other plant"];
 
     const ROBOFLOW_WORKSPACE = "haikal-lamo";
-    const ROBOFLOW_WORKFLOW_ID = "YOUR_WORKFLOW_ID";
-    const ROBOFLOW_API_KEY = "YOUR_API_KEY";
+    const ROBOFLOW_WORKFLOW_ID = "YOUR_WORKFLOW_ID"; // Paste your Workflow ID
+    const ROBOFLOW_API_KEY = "YOUR_API_KEY";         // Paste your Roboflow API Key
     const WORKFLOW_URL = `https://serverless.roboflow.com/infer/workflows/${ROBOFLOW_WORKSPACE}/${ROBOFLOW_WORKFLOW_ID}`;
 
     // =========================================================
@@ -482,16 +482,11 @@
       try {
         const response = await fetch(WORKFLOW_URL, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             api_key: ROBOFLOW_API_KEY,
             inputs: {
-              image: {
-                type: "base64",
-                value: base64Image
-              },
+              image: { type: "base64", value: base64Image },
               classes: "Bayam-Diseased, Bayam-Healthy, Pakcoy-Diseased, Pakcoy-Healthy, Selada-Diseased, Selada-Healthy"
             }
           })
